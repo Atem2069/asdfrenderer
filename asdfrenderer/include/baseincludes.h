@@ -15,9 +15,14 @@ struct ShaderDescriptor
 {
 	bool canTexture;
 	int textureBinding;
+
 	bool canNormalMap;
 	int normalMapBinding;
+
 	int positionBinding;
 	int normalBinding;
 	int texcoordBinding;
+
+	int pvBinding;
+	int modelBinding;
 };

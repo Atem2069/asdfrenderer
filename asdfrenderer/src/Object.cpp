@@ -48,10 +48,12 @@ void BasicObject::update(Vertex * newVertices, int numVertices, int offset)
 	std::cout << bufSize << " " << m_numVertices << std::endl;
 }
 
+
 //Now for assimp initialized object code.
 
 bool Object::init(std::string filePath, ShaderDescriptor descriptor)
 {
+	m_modelMatrix = glm::mat4(1);
 	//Set shader descriptor
 	m_descriptor = descriptor;
 
@@ -125,16 +127,23 @@ void Object::draw()
 {
 	for (int i = 0; i < m_numMeshes; i++)
 	{	
+		glUniformMatrix4fv(m_descriptor.modelBinding, 1, GL_FALSE, glm::value_ptr(m_modelMatrix));
 		glBindVertexArray(m_meshes[i].m_VAO);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_meshes[i].m_IBO);
 		glDrawElements(GL_TRIANGLES, m_meshes[i].m_numIndices, GL_UNSIGNED_INT, nullptr);
 	}
 }
 
+void Object::transformModelMatrix(glm::mat4 newMatrix)
+{
+	m_modelMatrix = newMatrix;
+}
+
 //Textured object.
 
 bool TexturedObject::init(std::string filePath, ShaderDescriptor descriptor)
 {
+	m_modelMatrix = glm::mat4(1);
 	//Set shader descriptor
 	m_descriptor = descriptor;
 
@@ -162,7 +171,8 @@ bool TexturedObject::init(std::string filePath, ShaderDescriptor descriptor)
 
 	for (int i = 0; i < scene->mNumMeshes; i++)
 	{
-		Mesh tempMesh = {};
+		//Mesh tempMesh = {};
+		m_meshes[i].m_doAlphaBlend = false;
 		aiMesh* mesh = scene->mMeshes[i];
 
 		//Loading vertices and indices.
@@ -175,20 +185,20 @@ bool TexturedObject::init(std::string filePath, ShaderDescriptor descriptor)
 			aiMaterial * material = scene->mMaterials[mesh->mMaterialIndex];
 
 			if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0)
-				tempMesh.m_texture = createMeshTexture(material, dir, i);
+				m_meshes[i].m_texture = createMeshTexture(material, dir, m_meshes[i].m_doAlphaBlend, i);
 
 		}
 		//Creating buffers and providing them to each temp mesh
-		glGenBuffers(1, &tempMesh.m_VBO);
-		glBindBuffer(GL_ARRAY_BUFFER, tempMesh.m_VBO);
+		glGenBuffers(1, &m_meshes[i].m_VBO);
+		glBindBuffer(GL_ARRAY_BUFFER, m_meshes[i].m_VBO);
 		glBufferData(GL_ARRAY_BUFFER, tempVertices.size() * sizeof(Vertex), &tempVertices[0], GL_STATIC_DRAW);
 
-		glGenBuffers(1, &tempMesh.m_IBO);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, tempMesh.m_IBO);
+		glGenBuffers(1, &m_meshes[i].m_IBO);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_meshes[i].m_IBO);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(unsigned int), &m_indices[0], GL_STATIC_DRAW);
 
-		glGenVertexArrays(1, &tempMesh.m_VAO);
-		glBindVertexArray(tempMesh.m_VAO);
+		glGenVertexArrays(1, &m_meshes[i].m_VAO);
+		glBindVertexArray(m_meshes[i].m_VAO);
 		glVertexAttribPointer(m_descriptor.positionBinding, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), nullptr);
 		glEnableVertexAttribArray(m_descriptor.positionBinding);
 		glVertexAttribPointer(m_descriptor.normalBinding, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));	//Offsetof call gets the offset into each vertex when given.
@@ -197,9 +207,15 @@ bool TexturedObject::init(std::string filePath, ShaderDescriptor descriptor)
 		glEnableVertexAttribArray(m_descriptor.texcoordBinding);
 		glBindVertexArray(0);
 
-		tempMesh.m_numIndices = m_indices.size();
-		m_meshes[i] = tempMesh;
+		m_meshes[i].m_numIndices = m_indices.size();
+		//m_meshes[i] = tempMesh;
+
+		tempVertices.clear();
+		m_indices.clear();
 	}
+
+	
+
 	return true;
 }
 
@@ -212,6 +228,10 @@ void TexturedObject::draw()
 {
 	for (int i = 0; i < m_numMeshes; i++)
 	{
+		glDisable(GL_BLEND);
+		if (m_meshes[i].m_doAlphaBlend)
+			glEnable(GL_BLEND);
+		glUniformMatrix4fv(m_descriptor.modelBinding, 1, GL_FALSE, glm::value_ptr(m_modelMatrix));
 		glActiveTexture(GL_TEXTURE0+m_descriptor.textureBinding);
 		glBindTexture(GL_TEXTURE_2D, m_meshes[i].m_texture);
 		glBindVertexArray(m_meshes[i].m_VAO);
@@ -221,6 +241,10 @@ void TexturedObject::draw()
 	}
 }
 
+void TexturedObject::transformModelMatrix(glm::mat4 newMatrix)
+{
+	m_modelMatrix = newMatrix;
+}
 
 
 
@@ -270,7 +294,7 @@ std::vector<unsigned int> loadMeshIndices(aiMesh* mesh)
 	return indices;
 }
 
-GLuint TexturedObject::createMeshTexture(aiMaterial* material, std::string workingDirectory, int currentIteration)
+GLuint TexturedObject::createMeshTexture(aiMaterial* material, std::string workingDirectory, bool& doAlphaBlend, int currentIteration)
 {
 	GLuint m_texture = 0;
 	//This is only run assuming texcount is valid, otherwise dumb stuff happens
@@ -278,8 +302,13 @@ GLuint TexturedObject::createMeshTexture(aiMaterial* material, std::string worki
 	material->GetTexture(aiTextureType_DIFFUSE, 0, &texPath);
 	std::string texFile = texPath.C_Str();
 	std::string texturePath = workingDirectory + texFile;
-
-	m_meshes[currentIteration].m_texturePath = texturePath;
+	m_meshes[currentIteration].m_texturePath = texturePath;	//hacky but need a way to store texture paths.
+	//Searching if textures exist already
+	for (int i = 0; i < currentIteration; i++)
+	{
+		if (std::strcmp(m_meshes[i].m_texturePath.c_str(), texturePath.c_str()) == 0)
+			return m_meshes[i].m_texture;
+	}
 
 	int width, height, channels;
 	unsigned char * image = stbi_load(texturePath.c_str(), &width, &height, &channels, 0);
@@ -289,21 +318,27 @@ GLuint TexturedObject::createMeshTexture(aiMaterial* material, std::string worki
 	}
 	GLenum loadType;
 	if (channels == 3)
+	{
+		doAlphaBlend = false;
 		loadType = GL_RGB;
+	}
 	if (channels == 4)
+	{
+		doAlphaBlend = true;
 		loadType = GL_RGBA;
+	}
 
 	//Generating texture
 	glGenTextures(1, &m_texture);
 	glBindTexture(GL_TEXTURE_2D, m_texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, loadType, GL_UNSIGNED_BYTE, image);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, loadType, GL_UNSIGNED_BYTE, image);
 	stbi_image_free(image);
 	//Filtering stuff
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glGenerateMipmap(GL_TEXTURE_2D);
+	glGenerateMipmap(GL_TEXTURE_2D);	//Mipmaps 
 
 	//Unbinding if something added forgets to bind
 	glBindTexture(GL_TEXTURE_2D, 0);

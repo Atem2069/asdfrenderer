@@ -25,7 +25,7 @@ struct Mesh
 	GLuint m_normalMap;
 	std::string m_texturePath;
 	int m_numIndices;
-	bool m_hasTexture = false;
+	bool m_doAlphaBlend;
 };
 
 
@@ -40,36 +40,41 @@ public:
 	virtual void draw();
 
 	virtual void update(Vertex * newVertices, int numVertices, int offset);
+
 private:
 	int m_numVertices;
 	GLuint m_VBO, m_VAO;
 };
 
 //Object type that inherits from Basic Object. This class can render complex geometry with vertices and normals, however it cannot do textures.
-class Object : public BasicObject
+class Object : BasicObject
 {
 public:
 	bool init(std::string modelPath, ShaderDescriptor descriptor);
 	void destroy();
 	void draw();
+	void transformModelMatrix(glm::mat4 newMatrix);
 private:
 	ShaderDescriptor m_descriptor;
 	Mesh * m_meshes;
 	int m_numMeshes;
+	glm::mat4 m_modelMatrix;
 };
 
 //Object type similar to the complex geometry object type, however this one supports textures.
-class TexturedObject : public BasicObject
+class TexturedObject : BasicObject
 {
 public:
 	bool init(std::string modelPath, ShaderDescriptor descriptor);
 	void destroy();
 	void draw();
+	void transformModelMatrix(glm::mat4 newMatrix);
 private:
 	ShaderDescriptor m_descriptor;
 	Mesh * m_meshes;
 	int m_numMeshes;
-	GLuint createMeshTexture(aiMaterial* material, std::string workingDirectory, int currentIteration);
+	glm::mat4 m_modelMatrix;
+	GLuint createMeshTexture(aiMaterial* material, std::string workingDirectory, bool& doAlphaBlend, int currentIteration);
 };
 
 
