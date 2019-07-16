@@ -79,7 +79,7 @@ bool Object::init(std::string filePath, ShaderDescriptor descriptor)
 
 	for (int i = 0; i < scene->mNumMeshes; i++)
 	{
-		Mesh tempMesh;
+		Mesh tempMesh = {};
 		aiMesh* mesh = scene->mMeshes[i];
 
 		//Loading vertices and indices.
@@ -149,7 +149,7 @@ bool TexturedObject::init(std::string filePath, ShaderDescriptor descriptor)
 
 	//Importing stuff with assimp
 	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(filePath, aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_OptimizeMeshes | aiProcess_GenNormals);
+	const aiScene* scene = importer.ReadFile(filePath, aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_OptimizeMeshes | aiProcess_GenNormals | aiProcess_FlipUVs);
 
 	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 	{
@@ -162,7 +162,7 @@ bool TexturedObject::init(std::string filePath, ShaderDescriptor descriptor)
 
 	for (int i = 0; i < scene->mNumMeshes; i++)
 	{
-		Mesh tempMesh;
+		Mesh tempMesh = {};
 		aiMesh* mesh = scene->mMeshes[i];
 
 		//Loading vertices and indices.
@@ -175,11 +175,9 @@ bool TexturedObject::init(std::string filePath, ShaderDescriptor descriptor)
 			aiMaterial * material = scene->mMaterials[mesh->mMaterialIndex];
 
 			if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0)
-				tempMesh.m_texture = createMeshTexture(material, dir);
-			else
-				std::cout << "Warning: Object " << filePath << " has an invalid material or otherwise contains no texture data. If you intend to use this with a textured shader it will not render properly." << std::endl;
-		}
+				tempMesh.m_texture = createMeshTexture(material, dir, i);
 
+		}
 		//Creating buffers and providing them to each temp mesh
 		glGenBuffers(1, &tempMesh.m_VBO);
 		glBindBuffer(GL_ARRAY_BUFFER, tempMesh.m_VBO);
@@ -214,11 +212,12 @@ void TexturedObject::draw()
 {
 	for (int i = 0; i < m_numMeshes; i++)
 	{
-		glActiveTexture(GL_TEXTURE0);
+		glActiveTexture(GL_TEXTURE0+m_descriptor.textureBinding);
 		glBindTexture(GL_TEXTURE_2D, m_meshes[i].m_texture);
 		glBindVertexArray(m_meshes[i].m_VAO);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_meshes[i].m_IBO);
 		glDrawElements(GL_TRIANGLES, m_meshes[i].m_numIndices, GL_UNSIGNED_INT, nullptr);
+		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 }
 
@@ -241,11 +240,12 @@ std::vector<Vertex> loadMeshVertices(aiMesh* mesh)
 		tempVertex.normal.x = mesh->mNormals[i].x;
 		tempVertex.normal.y = mesh->mNormals[i].y;
 		tempVertex.normal.z = mesh->mNormals[i].z;
-		if (mesh->mTextureCoords[0])
+		if (mesh->HasTextureCoords(0))
 		{
 			tempVertex.uv.x = mesh->mTextureCoords[0][i].x;
 			tempVertex.uv.y = mesh->mTextureCoords[0][i].y;
 		}
+
 
 		vertices.push_back(tempVertex);
 	}
@@ -270,29 +270,40 @@ std::vector<unsigned int> loadMeshIndices(aiMesh* mesh)
 	return indices;
 }
 
-GLuint createMeshTexture(aiMaterial* material, std::string workingDirectory)
+GLuint TexturedObject::createMeshTexture(aiMaterial* material, std::string workingDirectory, int currentIteration)
 {
-	GLuint m_texture;
-	//This is only run assuming texcount is valid.
+	GLuint m_texture = 0;
+	//This is only run assuming texcount is valid, otherwise dumb stuff happens
 	aiString texPath;
 	material->GetTexture(aiTextureType_DIFFUSE, 0, &texPath);
 	std::string texFile = texPath.C_Str();
 	std::string texturePath = workingDirectory + texFile;
 
+	m_meshes[currentIteration].m_texturePath = texturePath;
+
 	int width, height, channels;
-	stbi_set_flip_vertically_on_load(true);
-	unsigned char * image = stbi_load(texturePath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+	unsigned char * image = stbi_load(texturePath.c_str(), &width, &height, &channels, 0);
+	if (!image)
+	{
+		std::cout << "Failure loading image." << std::endl;
+	}
+	GLenum loadType;
+	if (channels == 3)
+		loadType = GL_RGB;
+	if (channels == 4)
+		loadType = GL_RGBA;
 
 	//Generating texture
 	glGenTextures(1, &m_texture);
 	glBindTexture(GL_TEXTURE_2D, m_texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
-
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, loadType, GL_UNSIGNED_BYTE, image);
+	stbi_image_free(image);
 	//Filtering stuff
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glGenerateMipmap(GL_TEXTURE_2D);
 
 	//Unbinding if something added forgets to bind
 	glBindTexture(GL_TEXTURE_2D, 0);

@@ -22,9 +22,13 @@ struct Mesh
 	GLuint m_VAO;
 	GLuint m_IBO;
 	GLuint m_texture;
+	GLuint m_normalMap;
+	std::string m_texturePath;
 	int m_numIndices;
 	bool m_hasTexture = false;
 };
+
+
 
 //Basic Object is probably not going to be worked on anymore. It simply takes some vertices provided by the end person, then renders it witha single VBO on a set binding point. Nothing else.
 class BasicObject
@@ -65,9 +69,10 @@ private:
 	ShaderDescriptor m_descriptor;
 	Mesh * m_meshes;
 	int m_numMeshes;
+	GLuint createMeshTexture(aiMaterial* material, std::string workingDirectory, int currentIteration);
 };
 
 
 std::vector<Vertex> loadMeshVertices(aiMesh* mesh);
 std::vector<unsigned int> loadMeshIndices(aiMesh* mesh);
-GLuint createMeshTexture(aiMaterial* material, std::string workingDirectory);
+
