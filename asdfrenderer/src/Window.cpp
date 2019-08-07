@@ -18,7 +18,6 @@ bool Window::init(int width, int height, int glmajor, int glminor, int samples, 
 		std::cout << "Failed to create window" << std::endl;
 		return false;
 	}
-
 	glfwMakeContextCurrent(m_window);
 
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))	//Initialize GLAD so opengl functions that aren't ancient can be used
