@@ -25,7 +25,6 @@ struct Mesh
 	GLuint m_normalMap;
 	std::string m_texturePath;
 	int m_numIndices;
-	bool m_doAlphaBlend;
 };
 
 
@@ -74,7 +73,7 @@ private:
 	Mesh * m_meshes;
 	int m_numMeshes;
 	glm::mat4 m_modelMatrix;
-	GLuint createMeshTexture(aiMaterial* material, std::string workingDirectory, bool& doAlphaBlend, int currentIteration);
+	GLuint createMeshTexture(aiMaterial* material, std::string workingDirectory, int currentIteration);
 };
 
 

@@ -172,7 +172,6 @@ bool TexturedObject::init(std::string filePath, ShaderDescriptor descriptor)
 	for (int i = 0; i < scene->mNumMeshes; i++)
 	{
 		//Mesh tempMesh = {};
-		m_meshes[i].m_doAlphaBlend = false;
 		aiMesh* mesh = scene->mMeshes[i];
 
 		//Loading vertices and indices.
@@ -185,7 +184,7 @@ bool TexturedObject::init(std::string filePath, ShaderDescriptor descriptor)
 			aiMaterial * material = scene->mMaterials[mesh->mMaterialIndex];
 
 			if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0)
-				m_meshes[i].m_texture = createMeshTexture(material, dir, m_meshes[i].m_doAlphaBlend, i);
+				m_meshes[i].m_texture = createMeshTexture(material, dir, i);
 
 		}
 		//Creating buffers and providing them to each temp mesh
@@ -228,9 +227,7 @@ void TexturedObject::draw()
 {
 	for (int i = 0; i < m_numMeshes; i++)
 	{
-		glDisable(GL_BLEND);
-		if (m_meshes[i].m_doAlphaBlend)
-			glEnable(GL_BLEND);
+		glEnable(GL_BLEND);
 		glUniformMatrix4fv(m_descriptor.modelBinding, 1, GL_FALSE, glm::value_ptr(m_modelMatrix));
 		glActiveTexture(GL_TEXTURE0+m_descriptor.textureBinding);
 		glBindTexture(GL_TEXTURE_2D, m_meshes[i].m_texture);
@@ -294,7 +291,7 @@ std::vector<unsigned int> loadMeshIndices(aiMesh* mesh)
 	return indices;
 }
 
-GLuint TexturedObject::createMeshTexture(aiMaterial* material, std::string workingDirectory, bool& doAlphaBlend, int currentIteration)
+GLuint TexturedObject::createMeshTexture(aiMaterial* material, std::string workingDirectory, int currentIteration)
 {
 	GLuint m_texture = 0;
 	//This is only run assuming texcount is valid, otherwise dumb stuff happens
@@ -317,16 +314,9 @@ GLuint TexturedObject::createMeshTexture(aiMaterial* material, std::string worki
 		std::cout << "Failure loading image." << std::endl;
 	}
 	GLenum loadType;
-	if (channels == 3)
-	{
-		doAlphaBlend = false;
-		loadType = GL_RGB;
-	}
+	loadType = GL_RGB;
 	if (channels == 4)
-	{
-		doAlphaBlend = true;
 		loadType = GL_RGBA;
-	}
 
 	//Generating texture
 	glGenTextures(1, &m_texture);
