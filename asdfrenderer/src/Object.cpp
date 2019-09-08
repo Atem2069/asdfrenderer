@@ -155,7 +155,7 @@ bool TexturedObject::init(std::string filePath, ShaderDescriptor descriptor)
 
 	//Getting directory so textures can be loaded if mtl file wants them
 	std::string dir = filePath.substr(0, filePath.find_last_of(R"(\)")) + R"(\)";
-
+	m_workingPath = dir;
 	//Importing stuff with assimp
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(filePath, aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_OptimizeMeshes | aiProcess_GenNormals | aiProcess_FlipUVs);
@@ -169,52 +169,14 @@ bool TexturedObject::init(std::string filePath, ShaderDescriptor descriptor)
 	m_meshes = new Mesh[scene->mNumMeshes];
 	m_numMeshes = scene->mNumMeshes;
 
-	for (int i = 0; i < scene->mNumMeshes; i++)
-	{
-		//Mesh tempMesh = {};
-		aiMesh* mesh = scene->mMeshes[i];
-
-		//Loading vertices and indices.
-		std::vector<Vertex> tempVertices = loadMeshVertices(mesh);
-		std::vector<unsigned int> m_indices = loadMeshIndices(mesh);
-
-		//Loading a texture for mesh
-		if (mesh->mMaterialIndex >= 0)
-		{
-			aiMaterial * material = scene->mMaterials[mesh->mMaterialIndex];
-
-			if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0)
-				m_meshes[i].m_texture = createMeshTexture(material, dir, i);
-
-		}
-		//Creating buffers and providing them to each temp mesh
-		glGenBuffers(1, &m_meshes[i].m_VBO);
-		glBindBuffer(GL_ARRAY_BUFFER, m_meshes[i].m_VBO);
-		glBufferData(GL_ARRAY_BUFFER, tempVertices.size() * sizeof(Vertex), &tempVertices[0], GL_STATIC_DRAW);
-
-		glGenBuffers(1, &m_meshes[i].m_IBO);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_meshes[i].m_IBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(unsigned int), &m_indices[0], GL_STATIC_DRAW);
-
-		glGenVertexArrays(1, &m_meshes[i].m_VAO);
-		glBindVertexArray(m_meshes[i].m_VAO);
-		glVertexAttribPointer(m_descriptor.positionBinding, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), nullptr);
-		glEnableVertexAttribArray(m_descriptor.positionBinding);
-		glVertexAttribPointer(m_descriptor.normalBinding, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));	//Offsetof call gets the offset into each vertex when given.
-		glEnableVertexAttribArray(m_descriptor.normalBinding);
-		glVertexAttribPointer(m_descriptor.texcoordBinding, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, uv));
-		glEnableVertexAttribArray(m_descriptor.texcoordBinding);
-		glBindVertexArray(0);
-
-		m_meshes[i].m_numIndices = m_indices.size();
-		//m_meshes[i] = tempMesh;
-
-		tempVertices.clear();
-		m_indices.clear();
-	}
-
-	
-
+	processNode(scene, scene->mRootNode);
+	//for (int i = 0; i < scene->mNumMeshes; i++)
+	//{
+	//	//Mesh tempMesh = {};
+	//	aiMesh* mesh = scene->mMeshes[i];
+	//	processMesh(scene, mesh, m_meshes[i], i);
+//
+//	}
 	return true;
 }
 
@@ -334,4 +296,53 @@ GLuint TexturedObject::createMeshTexture(aiMaterial* material, std::string worki
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	return m_texture;
+}
+
+void TexturedObject::processNode(const aiScene * scene, aiNode * node)
+{
+	for (int i = 0; i < node->mNumMeshes; i++)
+	{
+		aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
+		processMesh(scene, mesh, m_meshes[node->mMeshes[i]], node->mMeshes[i]);
+	}
+
+	for (int i = 0; i < node->mNumChildren; i++)
+		processNode(scene, node->mChildren[i]);
+}
+
+void TexturedObject::processMesh(const aiScene* scene, aiMesh * aimesh, Mesh & mesh, int currentIteration)
+{
+	//Loading vertices and indices.
+	std::vector<Vertex> tempVertices = loadMeshVertices(aimesh);
+	std::vector<unsigned int> m_indices = loadMeshIndices(aimesh);
+
+	//Loading a texture for mesh
+	if (aimesh->mMaterialIndex >= 0)
+	{
+		aiMaterial * material = scene->mMaterials[aimesh->mMaterialIndex];
+
+		if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0)
+			mesh.m_texture = createMeshTexture(material, m_workingPath, currentIteration);
+
+	}
+	//Creating buffers and providing them to each temp mesh
+	glGenBuffers(1, &mesh.m_VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, mesh.m_VBO);
+	glBufferData(GL_ARRAY_BUFFER, tempVertices.size() * sizeof(Vertex), &tempVertices[0], GL_STATIC_DRAW);
+
+	glGenBuffers(1, &mesh.m_IBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.m_IBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(unsigned int), &m_indices[0], GL_STATIC_DRAW);
+
+	glGenVertexArrays(1, &mesh.m_VAO);
+	glBindVertexArray(mesh.m_VAO);
+	glVertexAttribPointer(m_descriptor.positionBinding, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), nullptr);
+	glEnableVertexAttribArray(m_descriptor.positionBinding);
+	glVertexAttribPointer(m_descriptor.normalBinding, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));	//Offsetof call gets the offset into each vertex when given.
+	glEnableVertexAttribArray(m_descriptor.normalBinding);
+	glVertexAttribPointer(m_descriptor.texcoordBinding, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, uv));
+	glEnableVertexAttribArray(m_descriptor.texcoordBinding);
+	glBindVertexArray(0);
+
+	mesh.m_numIndices = m_indices.size();
 }

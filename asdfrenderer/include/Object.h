@@ -74,6 +74,9 @@ private:
 	int m_numMeshes;
 	glm::mat4 m_modelMatrix;
 	GLuint createMeshTexture(aiMaterial* material, std::string workingDirectory, int currentIteration);
+	void processNode(const aiScene* scene, aiNode* node);
+	void processMesh(const aiScene* scene, aiMesh* aimesh, Mesh& mesh, int currentIteration);
+	std::string m_workingPath;
 };
 
 
