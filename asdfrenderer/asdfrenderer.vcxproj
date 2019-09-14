@@ -23,6 +23,7 @@
     <ClCompile Include="src\Light.cpp" />
     <ClCompile Include="src\Object.cpp" />
     <ClCompile Include="src\Shader.cpp" />
+    <ClCompile Include="src\ShadowMapping.cpp" />
     <ClCompile Include="src\UploadBuffer.cpp" />
     <ClCompile Include="src\Window.cpp" />
   </ItemGroup>
@@ -32,6 +33,7 @@
     <ClInclude Include="include\Light.h" />
     <ClInclude Include="include\Object.h" />
     <ClInclude Include="include\Shader.h" />
+    <ClInclude Include="include\ShadowMapping.h" />
     <ClInclude Include="include\UploadBuffer.h" />
     <ClInclude Include="include\Window.h" />
   </ItemGroup>
