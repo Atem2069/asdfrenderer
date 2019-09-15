@@ -91,6 +91,12 @@ GLuint DirectionalShadowMap::getDepthTexture()
 	return m_depthTexture;
 }
 
+void DirectionalShadowMap::bindDepthTexture(int binding)
+{
+	glActiveTexture(GL_TEXTURE0 + binding);
+	glBindTexture(GL_TEXTURE_2D, m_depthTexture);
+}
+
 void DirectionalShadowMap::bindShadowCamera(int binding)
 {
 	glUniformMatrix4fv(binding, 1, GL_FALSE, glm::value_ptr(m_camera.getProjectionView()));

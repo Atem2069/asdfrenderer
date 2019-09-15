@@ -14,6 +14,7 @@ public:
 	void endFrame();
 
 	GLuint getDepthTexture();
+	void bindDepthTexture(int binding);
 	void bindShadowCamera(int binding);
 
 private:
