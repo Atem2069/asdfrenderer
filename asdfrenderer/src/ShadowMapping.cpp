@@ -60,7 +60,7 @@ bool DirectionalShadowMap::init(float shadowWidth, float shadowHeight, Direction
 	glLinkProgram(m_program);
 
 
-	m_camera.init(1024, 1024, 1.0f, 10000.0f);
+	m_camera.init(1024, 1024, 1.0f, 10000.0f);	//Seems to be the best trade-off for shadow quality.
 
 	return true;
 }
