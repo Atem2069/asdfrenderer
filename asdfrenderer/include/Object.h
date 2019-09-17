@@ -69,6 +69,9 @@ public:
 	void draw();
 	void transformModelMatrix(glm::mat4 newMatrix);
 private:
+	GLuint m_VBO, m_VAO;
+	int m_lastIndex = 0;
+	std::vector<Vertex> m_vertices;
 	ShaderDescriptor m_descriptor;
 	Mesh * m_meshes;
 	int m_numMeshes;
@@ -81,5 +84,5 @@ private:
 
 
 std::vector<Vertex> loadMeshVertices(aiMesh* mesh);
-std::vector<unsigned int> loadMeshIndices(aiMesh* mesh);
+std::vector<unsigned int> loadMeshIndices(aiMesh* mesh, int appendIndex);
 
