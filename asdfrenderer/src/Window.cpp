@@ -38,6 +38,9 @@ bool Window::init(int width, int height, int glmajor, int glminor, int samples, 
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+	if (samples > 1)
+		glEnable(GL_MULTISAMPLE);
+
 	m_dimensions = glm::vec2(width, height);
 	return true;
 }
