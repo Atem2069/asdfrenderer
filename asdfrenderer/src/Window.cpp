@@ -18,6 +18,7 @@ bool Window::init(int width, int height, int glmajor, int glminor, int samples, 
 		std::cout << "Failed to create window" << std::endl;
 		return false;
 	}
+	glfwSetFramebufferSizeCallback(m_window, (GLFWframebuffersizefun)framebufferSizeCallback);
 	glfwMakeContextCurrent(m_window);
 
 	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))	//Initialize GLAD so opengl functions that aren't ancient can be used
@@ -56,6 +57,9 @@ void Window::swapBackBuffer(bool vsync)
 
 bool Window::getShouldClose()
 {
+	int x, y;
+	glfwGetFramebufferSize(m_window, &x, &y);
+	m_dimensions = glm::vec2(x, y);
 	glfwPollEvents();	
 	return glfwWindowShouldClose(m_window);
 }
@@ -73,4 +77,10 @@ GLFWwindow* Window::getHandle()
 glm::vec2 Window::getDimensions()
 {
 	return m_dimensions;
+}
+
+void Window::framebufferSizeCallback(GLFWwindow* window, int width, int height)
+{
+	std::cout << "Framebuffer resized: " << width << "x" << height << "\n";
+	glViewport(0, 0, width, height);
 }

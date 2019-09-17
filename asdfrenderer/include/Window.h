@@ -19,6 +19,7 @@ public:
 
 	GLFWwindow* getHandle();
 private:
+	static void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 	glm::vec2 m_dimensions;
 	GLFWwindow * m_window;
 };
