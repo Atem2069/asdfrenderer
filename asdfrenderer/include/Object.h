@@ -18,8 +18,7 @@ struct Vertex
 //Basic mesh type. An object is made up of a number of meshes.
 struct Mesh
 {
-	GLuint m_VBO;
-	GLuint m_VAO;
+	int m_baseVertex;
 	GLuint m_IBO;
 	GLuint m_texture;
 	GLuint m_normalMap;
@@ -43,21 +42,6 @@ public:
 private:
 	int m_numVertices;
 	GLuint m_VBO, m_VAO;
-};
-
-//Object type that inherits from Basic Object. This class can render complex geometry with vertices and normals, however it cannot do textures.
-class Object : BasicObject
-{
-public:
-	bool init(std::string modelPath, ShaderDescriptor descriptor);
-	void destroy();
-	void draw();
-	void transformModelMatrix(glm::mat4 newMatrix);
-private:
-	ShaderDescriptor m_descriptor;
-	Mesh * m_meshes;
-	int m_numMeshes;
-	glm::mat4 m_modelMatrix;
 };
 
 //Object type similar to the complex geometry object type, however this one supports textures.

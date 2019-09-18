@@ -48,97 +48,6 @@ void BasicObject::update(Vertex * newVertices, int numVertices, int offset)
 	std::cout << bufSize << " " << m_numVertices << std::endl;
 }
 
-
-//Now for assimp initialized object code.
-
-bool Object::init(std::string filePath, ShaderDescriptor descriptor)
-{
-	m_modelMatrix = glm::mat4(1);
-	//Set shader descriptor
-	m_descriptor = descriptor;
-
-	if (!std::filesystem::exists(filePath))
-	{
-		std::cout << "File " << filePath << " does not exist." << std::endl;
-		return false;
-	}
-
-	//Getting directory so textures can be loaded if mtl file wants them
-	std::string dir = filePath.substr(0, filePath.find_last_of(R"(\)")) + R"(\)";
-
-	//Importing stuff with assimp
-	Assimp::Importer importer;
-	const aiScene* scene = importer.ReadFile(filePath, aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_OptimizeMeshes | aiProcess_GenNormals);
-
-	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
-	{
-		std::cout << "Given model failed to load: " << importer.GetErrorString() << std::endl;
-		return false;
-	}
-
-	m_meshes = new Mesh[scene->mNumMeshes];
-	m_numMeshes = scene->mNumMeshes;
-
-	for (int i = 0; i < scene->mNumMeshes; i++)
-	{
-		Mesh tempMesh = {};
-		aiMesh* mesh = scene->mMeshes[i];
-
-		//Loading vertices and indices.
-		std::vector<Vertex> tempVertices = loadMeshVertices(mesh);
-		std::vector<unsigned int> m_indices = loadMeshIndices(mesh,0);
-
-		//Creating buffers and providing them to each temp mesh
-		glGenBuffers(1, &tempMesh.m_VBO);
-		glBindBuffer(GL_ARRAY_BUFFER, tempMesh.m_VBO);
-		glBufferData(GL_ARRAY_BUFFER, tempVertices.size() * sizeof(Vertex), &tempVertices[0], GL_STATIC_DRAW);
-
-		glGenBuffers(1, &tempMesh.m_IBO);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, tempMesh.m_IBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(unsigned int), &m_indices[0], GL_STATIC_DRAW);
-
-		glGenVertexArrays(1, &tempMesh.m_VAO);
-		glBindVertexArray(tempMesh.m_VAO);
-		glVertexAttribPointer(m_descriptor.positionBinding, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), nullptr);
-		glEnableVertexAttribArray(m_descriptor.positionBinding);
-		glVertexAttribPointer(m_descriptor.normalBinding, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));	//Offsetof call gets the offset into each vertex when given.
-		glEnableVertexAttribArray(m_descriptor.normalBinding);
-		glVertexAttribPointer(m_descriptor.texcoordBinding, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, uv));
-		glEnableVertexAttribArray(m_descriptor.texcoordBinding);
-		glBindVertexArray(0);
-
-		tempMesh.m_numIndices = m_indices.size();
-		m_meshes[i] = tempMesh;
-	}
-	return true;
-}
-
-void Object::destroy()
-{
-	for (int i = 0; i < m_numMeshes; i++)
-	{
-		glDeleteVertexArrays(1, &m_meshes[i].m_VAO);
-		glDeleteBuffers(1, &m_meshes[i].m_VBO);
-		glDeleteBuffers(1, &m_meshes[i].m_IBO);
-	}
-}
-
-void Object::draw()
-{
-	for (int i = 0; i < m_numMeshes; i++)
-	{	
-		glUniformMatrix4fv(m_descriptor.modelBinding, 1, GL_FALSE, glm::value_ptr(m_modelMatrix));
-		glBindVertexArray(m_meshes[i].m_VAO);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_meshes[i].m_IBO);
-		glDrawElements(GL_TRIANGLES, m_meshes[i].m_numIndices, GL_UNSIGNED_INT, nullptr);
-	}
-}
-
-void Object::transformModelMatrix(glm::mat4 newMatrix)
-{
-	m_modelMatrix = newMatrix;
-}
-
 //Textured object.
 
 bool TexturedObject::init(std::string filePath, ShaderDescriptor descriptor)
@@ -188,7 +97,7 @@ void TexturedObject::draw()
 		glBindTexture(GL_TEXTURE_2D, m_meshes[i].m_texture);
 		glBindVertexArray(m_VAO);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_meshes[i].m_IBO);
-		glDrawElements(GL_TRIANGLES, m_meshes[i].m_numIndices, GL_UNSIGNED_INT, nullptr);
+		glDrawElementsBaseVertex(GL_TRIANGLES, m_meshes[i].m_numIndices, GL_UNSIGNED_INT, nullptr,m_meshes[i].m_baseVertex);
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 }
@@ -345,7 +254,8 @@ void TexturedObject::processMesh(const aiScene* scene, aiMesh * aimesh, Mesh & m
 		m_vertices.push_back(tempVertex);
 	}
 
-	std::vector<unsigned int> m_indices = loadMeshIndices(aimesh,m_lastIndex);
+	std::vector<unsigned int> m_indices = loadMeshIndices(aimesh,0);
+	mesh.m_baseVertex = m_lastIndex;
 	m_lastIndex += aimesh->mNumVertices;
 
 	//Loading a texture for mesh
