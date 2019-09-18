@@ -68,5 +68,5 @@ private:
 
 
 std::vector<Vertex> loadMeshVertices(aiMesh* mesh);
-std::vector<unsigned int> loadMeshIndices(aiMesh* mesh, int appendIndex);
+std::vector<unsigned int> loadMeshIndices(aiMesh* mesh);
 

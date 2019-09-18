@@ -138,7 +138,7 @@ std::vector<Vertex> loadMeshVertices(aiMesh* mesh)
 	return vertices;
 }
 
-std::vector<unsigned int> loadMeshIndices(aiMesh* mesh,int appendIndex)
+std::vector<unsigned int> loadMeshIndices(aiMesh* mesh)
 {
 	std::vector<unsigned int> indices;
 	for (int i = 0; i < mesh->mNumFaces; i++)
@@ -147,9 +147,9 @@ std::vector<unsigned int> loadMeshIndices(aiMesh* mesh,int appendIndex)
 		if (face.mNumIndices != 3)
 			continue;
 
-		indices.push_back(face.mIndices[0]+appendIndex);
-		indices.push_back(face.mIndices[1]+appendIndex);
-		indices.push_back(face.mIndices[2]+appendIndex);
+		indices.push_back(face.mIndices[0]);
+		indices.push_back(face.mIndices[1]);
+		indices.push_back(face.mIndices[2]);
 	}
 
 	return indices;
@@ -254,7 +254,7 @@ void TexturedObject::processMesh(const aiScene* scene, aiMesh * aimesh, Mesh & m
 		m_vertices.push_back(tempVertex);
 	}
 
-	std::vector<unsigned int> m_indices = loadMeshIndices(aimesh,0);
+	std::vector<unsigned int> m_indices = loadMeshIndices(aimesh);
 	mesh.m_baseVertex = m_lastIndex;
 	m_lastIndex += aimesh->mNumVertices;
 
