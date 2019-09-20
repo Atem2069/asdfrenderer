@@ -7,7 +7,7 @@ bool DirectionalShadowMap::init(float shadowWidth, float shadowHeight, Direction
 
 	glGenTextures(1, &m_depthTexture);
 	glBindTexture(GL_TEXTURE_2D, m_depthTexture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
@@ -60,7 +60,7 @@ bool DirectionalShadowMap::init(float shadowWidth, float shadowHeight, Direction
 	glLinkProgram(m_program);
 
 
-	m_camera.init(1024, 1024, 1.0f, 10000.0f);	//Seems to be the best trade-off for shadow quality.
+	m_camera.init(1024, 1024, 0.0f, 10000.0f);	//Seems to be the best trade-off for shadow quality.
 
 	return true;
 }
