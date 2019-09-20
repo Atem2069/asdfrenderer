@@ -1,4 +1,5 @@
 #define STB_IMAGE_IMPLEMENTATION
+#define GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT 0x8C4F
 #include "Object.h"
 
 bool BasicObject::init(Vertex * vertices, int numVertices)
@@ -185,7 +186,7 @@ GLuint TexturedObject::createMeshTexture(aiMaterial* material, std::string worki
 	//Generating texture
 	glGenTextures(1, &m_texture);
 	glBindTexture(GL_TEXTURE_2D, m_texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, loadType, GL_UNSIGNED_BYTE, image);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT, width, height, 0, loadType, GL_UNSIGNED_BYTE, image);
 	stbi_image_free(image);
 	//Filtering stuff
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
