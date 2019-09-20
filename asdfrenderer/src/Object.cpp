@@ -192,9 +192,7 @@ GLuint TexturedObject::createMeshTexture(aiMaterial* material, std::string worki
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	float anisoLevels = 0.0f;
-	glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY, &anisoLevels);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, anisoLevels);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY, 4.0f);
 	glGenerateMipmap(GL_TEXTURE_2D);	//Mipmaps 
 
 	//Unbinding if something added forgets to bind
