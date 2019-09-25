@@ -25,21 +25,33 @@ bool DirectionalShadowMap::init(float shadowWidth, float shadowHeight, Direction
 	std::string shadowVertexShader = R"(
 	#version 460 core
 	layout(location=0) in vec3 position;
+	layout(location=2) in vec2 texcoord;
+
 	layout(location=0) uniform mat4 lightSpaceMatrix;
 	layout(location=1) uniform mat4 model;
+
+	layout(location=0) out vec2 TexCoord;
 	
 	void main()
 	{
+		TexCoord = texcoord;
 		gl_Position = lightSpaceMatrix * model * vec4(position,1.0f);
 	}
 	)";
 
-	/*No colour-buffer write done*/
+	/*No colour-buffer write done, but alpha mask is used in order to stop artifacts due to alpha issues.*/
 	std::string shadowFragmentShader = R"(
 	#version 460 core
 	
+	layout(location=0) in vec2 TexCoord;
+
+	layout(location=5) uniform int doAlphaMask;
+	layout(binding=2) uniform sampler2D alphaMask;	
+
 	void main()
 	{
+		if(doAlphaMask>0 && texture(alphaMask,TexCoord).r < 0.75f)
+			discard;
 	}
 	)";
 
