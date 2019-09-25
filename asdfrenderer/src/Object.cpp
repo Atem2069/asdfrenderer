@@ -94,11 +94,14 @@ void TexturedObject::draw()
 	{
 		glEnable(GL_BLEND);
 		glUniformMatrix4fv(m_descriptor.modelBinding, 1, GL_FALSE, glm::value_ptr(m_modelMatrix));
+
 		if (m_meshes[i].m_hasTexture)
 		{
 			glActiveTexture(GL_TEXTURE0 + m_descriptor.textureBinding);
 			glBindTexture(GL_TEXTURE_2D, m_meshes[i].m_texture);
 		}
+		
+		glUniform1i(5, (int)m_meshes[i].m_bindAlphaMask);
 		if (m_meshes[i].m_bindAlphaMask)
 		{
 			glActiveTexture(GL_TEXTURE0 + 2);
@@ -282,7 +285,7 @@ void TexturedObject::processMesh(const aiScene* scene, aiMesh * aimesh, Mesh & m
 			mesh.m_bindAlphaMask = true;
 
 			aiString texPath;
-			material->GetTexture(aiTextureType_DIFFUSE, 0, &texPath);
+			material->GetTexture(aiTextureType_OPACITY, 0, &texPath);
 			std::string texFile = texPath.C_Str();
 			std::string texturePath = m_workingPath + texFile;
 
@@ -293,10 +296,14 @@ void TexturedObject::processMesh(const aiScene* scene, aiMesh * aimesh, Mesh & m
 				std::cout << "Failure loading image." << std::endl;
 			}
 
+			GLint storeMethod = GL_RED;
+			if (channels > 1)
+				storeMethod = GL_RG;
+			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 			//Generating texture
 			glGenTextures(1, &mesh.m_alphaMask);
 			glBindTexture(GL_TEXTURE_2D, mesh.m_alphaMask);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, image);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, storeMethod, GL_UNSIGNED_BYTE, image);
 			stbi_image_free(image);
 			//Filtering stuff
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
