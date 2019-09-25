@@ -94,8 +94,16 @@ void TexturedObject::draw()
 	{
 		glEnable(GL_BLEND);
 		glUniformMatrix4fv(m_descriptor.modelBinding, 1, GL_FALSE, glm::value_ptr(m_modelMatrix));
-		glActiveTexture(GL_TEXTURE0+m_descriptor.textureBinding);
-		glBindTexture(GL_TEXTURE_2D, m_meshes[i].m_texture);
+		if (m_meshes[i].m_hasTexture)
+		{
+			glActiveTexture(GL_TEXTURE0 + m_descriptor.textureBinding);
+			glBindTexture(GL_TEXTURE_2D, m_meshes[i].m_texture);
+		}
+		if (m_meshes[i].m_bindAlphaMask)
+		{
+			glActiveTexture(GL_TEXTURE0 + 2);
+			glBindTexture(GL_TEXTURE_2D, m_meshes[i].m_alphaMask);
+		}
 		glBindVertexArray(m_VAO);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_meshes[i].m_IBO);
 		glDrawElementsBaseVertex(GL_TRIANGLES, m_meshes[i].m_numIndices, GL_UNSIGNED_INT, nullptr,m_meshes[i].m_baseVertex);
@@ -263,7 +271,43 @@ void TexturedObject::processMesh(const aiScene* scene, aiMesh * aimesh, Mesh & m
 		aiMaterial * material = scene->mMaterials[aimesh->mMaterialIndex];
 
 		if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0)
+		{
+			mesh.m_hasTexture = true;
 			mesh.m_texture = createMeshTexture(material, m_workingPath, currentIteration);
+		}
+
+
+		if (material->GetTextureCount(aiTextureType_OPACITY) > 0)
+		{
+			mesh.m_bindAlphaMask = true;
+
+			aiString texPath;
+			material->GetTexture(aiTextureType_DIFFUSE, 0, &texPath);
+			std::string texFile = texPath.C_Str();
+			std::string texturePath = m_workingPath + texFile;
+
+			int width, height, channels;
+			unsigned char * image = stbi_load(texturePath.c_str(), &width, &height, &channels, 0);
+			if (!image)
+			{
+				std::cout << "Failure loading image." << std::endl;
+			}
+
+			//Generating texture
+			glGenTextures(1, &mesh.m_alphaMask);
+			glBindTexture(GL_TEXTURE_2D, mesh.m_alphaMask);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, image);
+			stbi_image_free(image);
+			//Filtering stuff
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+			//Unbinding if something added forgets to bind
+			glBindTexture(GL_TEXTURE_2D, 0);
+
+		}
 
 	}
 

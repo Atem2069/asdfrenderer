@@ -22,7 +22,10 @@ struct Mesh
 	GLuint m_IBO;
 	GLuint m_texture;
 	GLuint m_normalMap;
+	GLuint m_alphaMask;
 	std::string m_texturePath;
+	bool m_hasTexture = false;
+	bool m_bindAlphaMask = false;
 	int m_numIndices;
 };
 

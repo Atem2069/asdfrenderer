@@ -12,6 +12,7 @@ bool Window::init(int width, int height, int glmajor, int glminor, int samples, 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, glminor);
 	glfwWindowHint(GLFW_SAMPLES, samples);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 	m_window = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
 	if (!m_window)
 	{
