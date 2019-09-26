@@ -27,6 +27,7 @@ struct Mesh
 	bool m_hasTexture = false;
 	bool m_bindAlphaMask = false;
 	int m_numIndices;
+	int m_materialIndex = 0;
 };
 
 
@@ -63,7 +64,7 @@ private:
 	Mesh * m_meshes;
 	int m_numMeshes;
 	glm::mat4 m_modelMatrix;
-	GLuint createMeshTexture(aiMaterial* material, std::string workingDirectory, int currentIteration);
+	GLuint createMeshTexture(aiMaterial* material, std::string workingDirectory, int currentIteration, int materialIndex);
 	void processNode(const aiScene* scene, aiNode* node);
 	void processMesh(const aiScene* scene, aiMesh* aimesh, Mesh& mesh, int currentIteration);
 	std::string m_workingPath;

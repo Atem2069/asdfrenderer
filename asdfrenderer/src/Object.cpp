@@ -167,7 +167,7 @@ std::vector<unsigned int> loadMeshIndices(aiMesh* mesh)
 	return indices;
 }
 
-GLuint TexturedObject::createMeshTexture(aiMaterial* material, std::string workingDirectory, int currentIteration)
+GLuint TexturedObject::createMeshTexture(aiMaterial* material, std::string workingDirectory, int currentIteration, int materialIndex)
 {
 	GLuint m_texture = 0;
 	//This is only run assuming texcount is valid, otherwise dumb stuff happens
@@ -179,7 +179,7 @@ GLuint TexturedObject::createMeshTexture(aiMaterial* material, std::string worki
 	//Searching if textures exist already
 	for (int i = 0; i < currentIteration; i++)
 	{
-		if (std::strcmp(m_meshes[i].m_texturePath.c_str(), texturePath.c_str()) == 0)
+		if (m_meshes[i].m_materialIndex == materialIndex)
 			return m_meshes[i].m_texture;
 	}
 
@@ -272,16 +272,17 @@ void TexturedObject::processMesh(const aiScene* scene, aiMesh * aimesh, Mesh & m
 	if (aimesh->mMaterialIndex >= 0)
 	{
 		aiMaterial * material = scene->mMaterials[aimesh->mMaterialIndex];
-
+		mesh.m_materialIndex = aimesh->mMaterialIndex;
 		if (material->GetTextureCount(aiTextureType_DIFFUSE) > 0)
 		{
 			mesh.m_hasTexture = true;
-			mesh.m_texture = createMeshTexture(material, m_workingPath, currentIteration);
+			mesh.m_texture = createMeshTexture(material, m_workingPath, currentIteration,aimesh->mMaterialIndex);
 		}
 
 
 		if (material->GetTextureCount(aiTextureType_OPACITY) > 0)
 		{
+			bool doMaskLoad = true;
 			mesh.m_bindAlphaMask = true;
 
 			aiString texPath;
@@ -289,30 +290,40 @@ void TexturedObject::processMesh(const aiScene* scene, aiMesh * aimesh, Mesh & m
 			std::string texFile = texPath.C_Str();
 			std::string texturePath = m_workingPath + texFile;
 
-			int width, height, channels;
-			unsigned char * image = stbi_load(texturePath.c_str(), &width, &height, &channels, 0);
-			if (!image)
+			for (int i = 0; i < currentIteration; i++)
 			{
-				std::cout << "Failure loading image." << std::endl;
+				if (m_meshes[i].m_materialIndex == aimesh->mMaterialIndex)
+				{
+					mesh.m_alphaMask = m_meshes[i].m_alphaMask;
+					doMaskLoad = false;
+				}
 			}
 
-			GLint storeMethod = GL_RED;
-			if (channels > 1)
-				storeMethod = GL_RG;
-			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-			//Generating texture
-			glGenTextures(1, &mesh.m_alphaMask);
-			glBindTexture(GL_TEXTURE_2D, mesh.m_alphaMask);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, storeMethod, GL_UNSIGNED_BYTE, image);
-			stbi_image_free(image);
-			//Filtering stuff
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			if (doMaskLoad)
+			{
+				int width, height, channels;
+				unsigned char * image = stbi_load(texturePath.c_str(), &width, &height, &channels, 0);
+				if (!image)
+					std::cout << "Failure loading image." << std::endl;
 
-			//Unbinding if something added forgets to bind
-			glBindTexture(GL_TEXTURE_2D, 0);
+				GLint storeMethod = GL_RED;
+				if (channels > 1)
+					storeMethod = GL_RG;
+				glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+				//Generating texture
+				glGenTextures(1, &mesh.m_alphaMask);
+				glBindTexture(GL_TEXTURE_2D, mesh.m_alphaMask);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, storeMethod, GL_UNSIGNED_BYTE, image);
+				stbi_image_free(image);
+				//Filtering stuff
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+				//Unbinding if something added forgets to bind
+				glBindTexture(GL_TEXTURE_2D, 0);
+			}
 
 		}
 
